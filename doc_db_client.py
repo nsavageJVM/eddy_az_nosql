@@ -154,8 +154,6 @@ def main(argv):
                 finally:
                     print("\ncreate-document  done")
 
-
-
         elif command == 'QQ':
             break
 
