@@ -1,6 +1,5 @@
 import sys
 
-import pydocumentdb.documents as documents
 import pydocumentdb.errors as errors
 import pydocumentdb.document_client as document_client
 
@@ -14,6 +13,8 @@ DATABASE_ID = cfg.settings['database_id']
 COLLECTION_ID = cfg.settings['collection_id']
 
 database_link = 'dbs/' + DATABASE_ID
+
+col = {}
 
 #region utility class handle db connections correctly
 class IDisposable:
@@ -46,6 +47,7 @@ def create_database(client, id):
             raise errors.HTTPFailure(e.status_code)
 #endregion
 
+#region delete db
 def delete_database(client, id):
     print("\n5. Delete Database")
 
@@ -60,8 +62,45 @@ def delete_database(client, id):
             print('A database with id \'{0}\' does not exist'.format(id))
         else:
             raise errors.HTTPFailure(e.status_code)
+#endregion
 
+#region create collection
+def create_collection(client, id):
+    """ Execute the most basic Create of collection.
+    This will create a collection with OfferType = S1 and default indexing policy """
+    global col
+    print("\n2.1 Create Collection - Basic")
 
+    try:
+        col  = client.CreateCollection(database_link, {"id": id})
+        print('Collection with id \'{0}\' created'.format(id))
+
+    except errors.DocumentDBError as e:
+        if e.status_code == 409:
+            print('A collection with id \'{0}\' already exists'.format(id))
+        else:
+            raise errors.HTTPFailure(e.status_code)
+
+#endregion
+
+#region create collection
+def create_document(client, id):
+    """ Execute the most basic Create of collection.
+    This will create a collection with OfferType = S1 and default indexing policy """
+
+    print("\n2.1 Create Document")
+    # https://azure.microsoft.com/en-us/documentation/articles/documentdb-python-application/
+    try:
+        client.CreateDocument(col['_self'],
+                {'id': 'eddy-doc','filed_key': 'field_value', 'name': 'eddy-doc'  })
+
+    except errors.DocumentDBError as e:
+        if e.status_code == 409:
+            print('A collection with id \'{0}\' already exists'.format(id))
+        else:
+            raise errors.HTTPFailure(e.status_code)
+
+#endregion
 
 def main(argv):
     while True:
@@ -77,7 +116,7 @@ def main(argv):
                     print('\ncreating db has caught an error. {0}'.format(e.message))
 
                 finally:
-                    print("\nrcreating db done")
+                    print("\ncreating db done")
 
         if command == 'delete-db':
             print("delete db")
@@ -91,10 +130,35 @@ def main(argv):
                 finally:
                     print("\ndelete db done")
 
+        if command == 'create-col':
+            print("create-col")
+
+            with IDisposable(document_client.DocumentClient(HOST, {'masterKey': MASTER_KEY})) as client:
+                try:
+                    create_collection(client, COLLECTION_ID)
+                except errors.HTTPFailure as e:
+                    print('\ndelete db has caught an error. {0}'.format(e.message))
+
+                finally:
+                    print("\ndelete db done")
+
+        if command == 'create-doc':
+            print("create-document")
+
+            with IDisposable(document_client.DocumentClient(HOST, {'masterKey': MASTER_KEY})) as client:
+                try:
+                    create_document(client, COLLECTION_ID)
+                except errors.HTTPFailure as e:
+                    print('\ncreate-document has caught an error. {0}'.format(e.message))
+
+                finally:
+                    print("\ncreate-document  done")
+
+
+
         elif command == 'QQ':
             break
-        else:
-            print('Invalid Command\n')
+
 
 
 if __name__ == "__main__":
